@@ -1,0 +1,75 @@
+
+---
+parameters:
+- name: 'applicationName'
+  type: string
+  displayName: 'Application Name'
+
+- name: 'serviceConnectionName'
+  type: string
+  displayName: 'Service Connection Name'
+
+- name: 'artifactName'
+  type: string
+  displayName: 'Build Artifact File Name'
+
+- name: 'environment'
+  type: string
+  displayName: 'Environment'
+
+- name: 'buildVersion'
+  type: string
+  displayName: 'Build Version'
+
+- name: 'websitePhysicalPath'
+  type: string
+
+- name: 'appPoolName'
+  type: string
+
+- name: 'frameworkVer'
+  type: string
+
+- name: 'bindingConfig'
+  type: string
+
+steps:
+
+- task: DownloadBuildArtifacts@0
+  displayName: 'Download Artifact'
+  inputs:
+    buildType: 'current'
+    downloadType: 'single'
+    artifactName: 'release'
+    downloadPath: '$(System.ArtifactsDirectory)'
+
+
+- task: IISWebAppManagementOnMachineGroup@0
+  inputs:            
+    IISDeploymentType: 'IISWebsite'
+    ActionIISWebsite: 'CreateOrUpdateWebsite'
+    WebsiteName: '$(applicationName)'
+    WebsitePhysicalPath: '$(websitePhysicalPath)'
+    WebsitePhysicalPathAuth: 'WebsiteUserPassThrough'
+    CreateOrUpdateAppPoolForWebsite: true
+    AppPoolNameForWebsite: '$(appPoolName)'
+    DotNetVersionForWebsite: '$(frameworkVer)'
+    PipeLineModeForWebsite: 'Integrated'
+    AppPoolIdentityForWebsite: 'ApplicationPoolIdentity'
+    AddBinding: true
+    Bindings: |
+        $(bindingConfig)
+
+- task: IISWebAppDeploymentOnMachineGroup@0
+  displayName: 'IIS Web App Deploy'
+  inputs:
+    WebSiteName: '${{parameters.applicationName}}'
+    takeAppOfflineFlag: true
+    Package: '$(System.ArtifactsDirectory)/release/${{parameters.artifactName}}'
+    jSONFiles: '**/appsettings.json'
+
+- task: DeleteFiles@1
+  displayName: 'Remove Un-Needed Files'
+  inputs:
+    contents: |
+      **/*

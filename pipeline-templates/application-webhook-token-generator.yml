@@ -1,0 +1,25 @@
+---
+parameters:
+   
+- name: 'webhookSecret'
+  type: string
+  displayName: 'Webhook secret' 
+  
+- name: 'payload'
+  type: string
+  displayName: 'Payload'
+
+steps:
+
+- task: PowerShell@2  
+  name: "GenerateHashCode" 
+  inputs:  
+    targetType: 'inline'  
+    script: |  
+       $bodyData = [System.Text.Encoding]::UTF8.GetBytes('${{Parameters.payload}}')
+       $keyData = [System.Text.Encoding]::UTF8.GetBytes('${{Parameters.webhookSecret}}')
+       $hmac = [System.Security.Cryptography.HMACSHA1]::new($keyData)
+       $bodyHash = $hmac.ComputeHash($bodyData)
+       $hmac.Dispose()
+       $sha1 = [System.BitConverter]::ToString($bodyHash).ToLower().Replace("-", "")
+       Write-Host "##vso[task.setvariable variable=payloadHash;isOutput=true;]$sha1"

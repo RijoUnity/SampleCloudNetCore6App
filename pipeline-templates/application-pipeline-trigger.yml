@@ -1,0 +1,27 @@
+---
+parameters:
+   
+- name: 'webhookConnection'
+  type: string
+  displayName: 'Webhook connection Name' 
+  
+- name: 'payLoad'
+  type: string
+  displayName: 'payLoad'
+
+- name: 'payloadHash'
+  type: string
+  displayName: 'Payload hash'
+
+steps:
+
+- task: InvokeRESTAPI@1
+  inputs:
+    connectionType: 'connectedServiceName'
+    serviceConnection: '${{Parameters.webhookConnection}}'
+    method: 'POST'
+    headers: '{ "Content-Type": "application/json", "X-Webhook-Signature": "${{Parameters.payloadHash}}"}' 
+    body: '${{Parameters.payLoad}}'
+    waitForCompletion: 'false'
+      
+  

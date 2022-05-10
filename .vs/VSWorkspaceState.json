@@ -1,0 +1,11 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\azure-pipeline",
+    "\\azure-pipeline\\env",
+    "\\azure-pipeline\\env\\dev",
+    "\\pipeline-templates"
+  ],
+  "SelectedNode": "\\azure-pipelines.yml",
+  "PreviewInSolutionExplorer": false
+}

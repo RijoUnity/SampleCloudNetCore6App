@@ -1,0 +1,31 @@
+---
+parameters:
+- name: 'serviceConnection'
+  type: string
+  displayName: 'Veracode Service Account'
+
+steps:
+
+- task: DownloadPipelineArtifact@2
+  inputs:
+    patterns: '**/*.exe,**/*.dll,**/*.pdb'
+
+# This task makes the pipeline build artifacts available in a known location for upload to Veracode
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: $(System.DefaultWorkingDirectory)/bin/release
+    artifactName: scan
+    
+- task: Veracode@3
+  inputs:
+    ConnectionDetailsSelection: 'Endpoint' 
+    AnalysisService: '${{parameters.serviceConnection}}'
+    veracodeAppProfile: '$(system.teamProject)'
+    version: '$(build.buildNumber)'
+    filepath: '$(System.DefaultWorkingDirectory)/bin/release' 
+    createSandBox: false 
+    createProfile: true 
+    failTheBuildIfVeracodeScanDidNotInitiate: false 
+    importResults: true
+    failBuildOnPolicyFail: false 
+    maximumWaitTime: '60' 

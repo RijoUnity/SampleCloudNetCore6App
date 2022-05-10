@@ -1,0 +1,115 @@
+trigger:
+  branches:
+    include:
+    - master
+    - develop
+    - releases/*
+    - projects/*
+    exclude:
+    - feature/*
+
+pool:
+  vmImage: windows-latest
+
+variables:
+  buildVersion: 1.0.2
+  solution: '**/*.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+  buildFileName: 'uaeftsservices.zip'
+  is_dev_deploy: true
+  is_neo_artifact: true
+  is_verify_artifact: true
+  wait_timeout: 120
+  isDeployAllowedBranch: ${{or(in(variables['Build.SourceBranch'],'refs/heads/master','refs/heads/develop'),startsWith(variables['Build.SourceBranch'],'refs/heads/releases/'),startsWith(variables['Build.SourceBranch'],'refs/heads/projects/'))}}
+  isAutoApprovalAllowedBranch: ${{or(eq(variables['Build.SourceBranch'],'refs/heads/master'),startsWith(variables['Build.SourceBranch'],'refs/heads/releases/'))}}
+
+stages:
+
+- stage: build
+  displayName: 'Build Application'
+  pool: devops-agent-win-uis
+  jobs:
+  - job: BuildApplication
+    steps:
+      - template: pipeline-templates\application-build-template.yml
+        parameters:
+          solution: $(solution)
+          buildPlatform: $(buildPlatform)
+          buildConfiguration: $(buildConfiguration)
+          buildFileName: '${{variables.buildFileName}}'
+
+- stage: verify_artifact
+  dependsOn: 
+  - build
+  condition: and(succeeded(), eq(variables.is_verify_artifact, true))
+  displayName: 'Artifact Verification'
+  jobs:
+   - job: ArtifactVerification
+     displayName: Waiting for Verification
+     pool: server
+     timeoutInMinutes: $[variables['wait_timeout']]
+     steps:
+      - template: pipeline-templates\application-verify-template.yml
+        parameters:
+          timeoutInMinutes: ${{ variables.wait_timeout }}
+
+- stage: dev_deploy
+  dependsOn: 
+  - verify_artifact
+  condition: and(succeeded(), eq(variables.is_dev_deploy, true))
+  displayName: 'VM Web Deployment'
+  jobs:
+  - deployment: VMDeploy
+    environment:
+      name: 'Local VM Deployment'
+      resourceType: VirtualMachine
+    variables:
+      - template: azure-pipeline\env\dev\config.yml
+    strategy: 
+      runOnce:
+        deploy:
+          steps:
+          - template: pipeline-templates\application-deploy-iis-template.yml
+            parameters:
+              applicationName: $(applicationName)
+              serviceConnectionName: 'Unity Development Service Connection'
+              artifactName: '${{variables.buildFileName}}'
+              buildVersion: '${{variables.buildVersion}}'
+              environment: $(environment)
+              websitePhysicalPath: '$(websitePhysicalPath)'
+              frameworkVer: '$(frameworkVer)'
+              bindingConfig: '$(bindingConfig)'
+              appPoolName: $(appPoolName)
+
+
+- stage: publish_neo_artifact
+  dependsOn: 
+  - verify_artifact
+  condition: and(succeeded(), eq(variables.is_neo_artifact, true), eq(variables.isDeployAllowedBranch, true))
+  displayName: 'Neo Bank Publish Artifact'
+  jobs:
+
+  - job: VerifyExternalArtifact
+    displayName: Waiting for Verification
+    pool: server
+    timeoutInMinutes: $[variables['wait_timeout']]
+    steps:
+    - template: pipeline-templates\application-verify-template.yml
+      parameters:
+        timeoutInMinutes: ${{ variables.wait_timeout }}
+        ${{ if eq(variables.isAutoApprovalAllowedBranch, true) }}:
+          validationEnabled: false
+
+  - job: PublishArtifact
+    dependsOn: VerifyExternalArtifact
+    steps:
+    - template: pipeline-templates\application-publish-artifact-template.yml
+      parameters:
+        feedGroupName: 'neobank-platform/neobank_unity'
+        feedConnection: 'NeoFeedConnection'
+        artifactName: 'release'
+        externalArtifactName: 'api-fund-transfer'
+        description: 'Fund Transfer API Service'
+        buildVersion: '${{variables.buildVersion}}'
+

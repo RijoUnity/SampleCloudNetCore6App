@@ -1,0 +1,12 @@
+variables:
+  - name: environment
+    value: dev
+
+  - name: serviceConnectionName
+    value: ''
+
+  - name: applicationName
+    value: 'SampleNetCore6App'
+
+    # json substitution   
+  

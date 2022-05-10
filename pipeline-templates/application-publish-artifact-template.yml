@@ -1,0 +1,50 @@
+---
+parameters:
+   
+- name: 'feedGroupName'
+  type: string
+  displayName: 'Feed Group Name'   
+  
+- name: 'feedConnection'
+  type: string
+  displayName: 'Feed Group Connection Name' 
+
+- name: 'artifactName'
+  type: string
+  displayName: 'Artifact Name' 
+
+- name: 'externalArtifactName'
+  type: string
+  displayName: 'External Artifact Name' 
+
+- name: 'description'
+  type: string
+  displayName: 'Release Description' 
+
+- name: 'buildVersion'
+  type: string
+  displayName: 'Build Version'
+
+steps:
+
+  - task: DownloadBuildArtifacts@0
+    inputs:
+      buildType: 'current'
+      downloadType: 'single'
+      artifactName: '${{parameters.artifactName}}'
+      downloadPath: '$(System.ArtifactsDirectory)'
+      
+  - task: UniversalPackages@0
+    displayName: 'Publish Artifact'
+    inputs:
+      command: publish
+      publishDirectory: '$(build.artifactstagingdirectory)/${{parameters.artifactName}}'
+      feedsToUsePublish: external
+      publishFeedCredentials: '${{parameters.feedConnection}}'
+      feedPublishExternal: '${{parameters.feedGroupName}}'
+      packagePublishExternal: '${{parameters.externalArtifactName}}'
+      packagePublishDescription: '${{parameters.description}} - ( ${{parameters.buildVersion}} )'
+      versionOption: minor
+       
+      
+  

@@ -1,0 +1,20 @@
+parameters:
+- name: validationEnabled
+  displayName: 'Validation Enabled'
+  type: boolean
+  default: true
+
+- name: timeoutInMinutes
+  displayName: 'Timeout in minutes'
+  type: number
+  default: 120
+
+steps:
+    - task: ManualValidation@0
+      enabled: ${{Parameters.validationEnabled}}
+      timeoutInMinutes: ${{Parameters.timeoutInMinutes}}
+      inputs:
+        notifyUsers: |
+          manoj.kumar@unityinfotech.com
+        instructions: 'Waiting for review'
+        onTimeout: 'resume'

@@ -1,0 +1,46 @@
+---
+
+parameters:
+- name: 'solution'
+  type: string
+  displayName: 'Solution Folder'
+
+- name: 'buildPlatform'
+  type: string
+  displayName: 'Build Platform'
+
+- name: 'buildConfiguration'
+  type: string
+  displayName: 'Build Configuration'
+
+- name: 'buildFileName'
+  type: string
+  displayName: 'Build File Name'
+  
+
+steps:
+
+  - task: NuGetToolInstaller@1
+    displayName: 'Install NuGet Packages'
+  
+  - task: NuGetCommand@2
+    inputs:
+      command: 'restore'
+      solution: '${{parameters.solution}}'
+      feedsToUse: 'select'
+      vstsFeed: 'UnityInfotechSolutions'
+      includeNuGetOrg: true
+  
+  - task: VSBuild@1
+    inputs:
+      solution: '${{parameters.solution}}'
+      msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true /p:SkipInvalidConfigurations=true /p:DesktopBuildPackageLocation="$(build.artifactStagingDirectory)\${{parameters.buildFileName}}" /p:DeployIisAppPath="Default Web Site"'
+      platform: '${{parameters.buildPlatform}}'
+      configuration: '${{parameters.buildConfiguration}}'
+  
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathToPublish: '$(Build.ArtifactStagingDirectory)'
+      artifactName: 'release'
+
+  
